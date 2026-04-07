@@ -1,0 +1,26 @@
+{
+  "name": "research-feed-app",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev:web": "npm run dev -w apps/web",
+    "dev:api": "npm run dev -w services/api",
+    "dev:ingest": "npm run dev -w services/ingest",
+    "dev:ai": "npm run dev -w services/ai",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "seed": "npm run seed -w services/ingest",
+    "ingest:sync": "npm run sync -w services/ingest",
+    "retention:run": "npm run retention -w services/ingest",
+    "ai:process": "npm run process -w services/ai"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "typescript": "^5.9.2"
+  }
+}
