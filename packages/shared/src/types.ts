@@ -31,6 +31,24 @@ export interface RightsPolicy {
   rawSnapshotStorageDays: number;
 }
 
+export type StudyDesign =
+  | "systematic-review"
+  | "meta-analysis"
+  | "rct"
+  | "cohort"
+  | "case-control"
+  | "cross-sectional"
+  | "case-report"
+  | "review"
+  | "editorial"
+  | "other";
+
+export interface PaperAuthor {
+  given: string;
+  family: string;
+  position: number;
+}
+
 export interface PaperRecord {
   id: string;
   slug: string;
@@ -41,11 +59,22 @@ export interface PaperRecord {
   title: string;
   publishedAt: string;
   articleType: string;
+  studyDesign: StudyDesign | null;
   topicIds: TopicId[];
+  authors: PaperAuthor[];
   shortSummary: string;
   longSummary: string | null;
+  whyItMatters: string | null;
+  takeaway: string | null;
+  clinicalImpact: string | null;
+  methodQuality: string | null;
+  whoItsFor: string | null;
   imageUrl: string | null;
   openAccess: boolean;
   abstractAvailable: boolean;
   source: "pubmed" | "europepmc";
+  /**
+   * Times this work was cited (third-party index, often OpenAlex). Omitted when unknown.
+   */
+  citedByCount?: number | null;
 }

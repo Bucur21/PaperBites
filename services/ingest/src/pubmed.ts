@@ -5,7 +5,8 @@ import type { TopicDefinition } from "../../../packages/shared/src";
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "",
-  isArray: (name) => ["PubmedArticle", "PubDate", "ArticleId", "PublicationType", "AbstractText"].includes(name)
+  isArray: (name) =>
+    ["PubmedArticle", "PubDate", "ArticleId", "PublicationType", "AbstractText", "Author"].includes(name)
 });
 
 const MONTH_MAP: Record<string, string> = {
@@ -53,6 +54,33 @@ async function throttledFetch(url: string, init?: RequestInit, attempt = 0): Pro
 function normalizeMonth(value: string) {
   const trimmed = value.slice(0, 3);
   return MONTH_MAP[trimmed] ?? value.padStart(2, "0");
+}
+
+function normalizePublicationType(raw: unknown): string {
+  if (raw == null) {
+    return "Article";
+  }
+
+  if (typeof raw === "string") {
+    return raw;
+  }
+
+  if (Array.isArray(raw)) {
+    const first = raw[0];
+    return normalizePublicationType(first);
+  }
+
+  if (typeof raw === "object") {
+    const text = (raw as { "#text"?: unknown })["#text"];
+    if (typeof text === "string") {
+      return text;
+    }
+    if (typeof text === "number") {
+      return String(text);
+    }
+  }
+
+  return "Article";
 }
 
 function textFromValue(value: unknown): string {
@@ -135,6 +163,13 @@ export async function fetchPaperDetails(pmids: string[]) {
           Article?: {
             ArticleTitle?: string;
             Abstract?: { AbstractText?: Array<string | { "#text"?: string }> };
+            AuthorList?: {
+              Author?: Array<{
+                ForeName?: string;
+                LastName?: string;
+                CollectiveName?: string;
+              }>;
+            };
             Journal?: { Title?: string; JournalIssue?: { PubDate?: Array<Record<string, string>> } };
             PublicationTypeList?: { PublicationType?: string[] };
           };
@@ -153,7 +188,8 @@ export async function fetchPaperDetails(pmids: string[]) {
     const details = citation?.Article;
     const ids = article.PubmedData?.ArticleIdList?.ArticleId ?? [];
     const doi = ids.find((entry) => entry.IdType === "doi")?.["#text"] ?? null;
-    const publicationType = details?.PublicationTypeList?.PublicationType?.[0] ?? "Article";
+    const pmcId = ids.find((entry) => entry.IdType === "pmc")?.["#text"] ?? null;
+    const publicationType = normalizePublicationType(details?.PublicationTypeList?.PublicationType);
     const pubDate = details?.Journal?.JournalIssue?.PubDate?.[0] ?? {};
     const year = pubDate.Year ?? new Date().getUTCFullYear().toString();
     const month = normalizeMonth(pubDate.Month ?? "01");
@@ -162,6 +198,13 @@ export async function fetchPaperDetails(pmids: string[]) {
       .map((entry) => (typeof entry === "string" ? entry : entry["#text"] ?? ""))
       .join(" ")
       .trim();
+
+    const rawAuthors = details?.AuthorList?.Author ?? [];
+    const authors = rawAuthors.map((a, i) => ({
+      given: textFromValue(a.ForeName) || textFromValue(a.CollectiveName) || "",
+      family: textFromValue(a.LastName) || "",
+      position: i + 1
+    }));
 
     return {
       sourceId: textFromValue(citation?.PMID),
@@ -174,7 +217,8 @@ export async function fetchPaperDetails(pmids: string[]) {
       sourceUrl: `https://pubmed.ncbi.nlm.nih.gov/${textFromValue(citation?.PMID)}/`,
       abstractAvailable: Boolean(abstractText),
       abstractText,
-      openAccess: false,
+      openAccess: Boolean(pmcId),
+      authors,
       snapshot: article
     };
   });

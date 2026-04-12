@@ -38,6 +38,7 @@ async function runSync() {
           abstractAvailable: paper.abstractAvailable,
           openAccess: paper.openAccess,
           topicIds: [...matchedTopicIds],
+          authors: paper.authors,
           snapshot: paper.snapshot
         });
 

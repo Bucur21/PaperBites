@@ -7,8 +7,15 @@ import { getPapersMissingSummaries, pool, saveImage, saveSummary } from "./db";
 const modelName = process.env.OPENAI_MODEL ?? "gpt-4.1-mini";
 const imageModel = process.env.IMAGE_MODEL ?? "gpt-image-1";
 const enableAiImages = process.env.ENABLE_AI_IMAGES === "true";
+const openAiBaseUrl = process.env.OPENAI_BASE_URL;
 
-const client = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
+const client =
+  process.env.OPENAI_API_KEY || openAiBaseUrl
+    ? new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY ?? "local-model",
+        baseURL: openAiBaseUrl || undefined
+      })
+    : null;
 
 function heuristicSummary(title: string, journal: string, articleType: string) {
   const shortSummary = `${title} appears in ${journal} and is currently framed as a ${articleType.toLowerCase()} worth reviewing directly in the original source.`;
@@ -19,6 +26,10 @@ function heuristicSummary(title: string, journal: string, articleType: string) {
     shortSummary,
     longSummary,
     whyItMatters: "It keeps the feed readable while preserving a cautious, source-first workflow.",
+    takeaway: "One-line takeaway: useful enough to scan quickly, but still worth validating in the source.",
+    clinicalImpact: "Treat as directional signal rather than direct practice guidance until you review the source paper.",
+    methodQuality: `${articleType} framing suggests the paper may be informative, but the original methods determine how much confidence it deserves.`,
+    whoItsFor: "Best for professionals and students tracking this field who want a quick first-pass summary.",
     qualityFlags: ["fallback-summary"]
   };
 }
@@ -30,33 +41,52 @@ async function generateSummary(title: string, journal: string, articleType: stri
 
   const prompt = [
     "You are generating a summary for a scientific research discovery feed.",
-    "Return strict JSON with keys shortSummary, longSummary, whyItMatters, qualityFlags.",
+    "Return strict JSON with keys shortSummary, longSummary, whyItMatters, takeaway, clinicalImpact, methodQuality, whoItsFor, qualityFlags.",
     "Keep tone cautious, plain language, and never provide medical advice.",
     "Mention if the evidence is early or limited when details are sparse.",
+    "The takeaway must be one sentence and optimized for fast skimming.",
+    "ClinicalImpact should explain what this might change in care or why it probably should not change care yet.",
+    "MethodQuality should explain the likely confidence level in plain language.",
+    "WhoItsFor should name the audience who benefits most from reading this paper.",
     `Title: ${title}`,
     `Journal: ${journal}`,
     `ArticleType: ${articleType}`,
     `Content constraints: ${CONTENT_POLICY_NOTES.join(" ")}`
   ].join("\n");
 
-  const response = await client.responses.create({
+  const response = await client.chat.completions.create({
     model: modelName,
-    input: prompt,
-    text: { format: { type: "json_object" } }
+    messages: [
+      {
+        role: "user",
+        content: prompt
+      }
+    ],
+    response_format: { type: "json_object" }
   });
 
-  const output = response.output_text;
+  const output = response.choices[0]?.message?.content ?? "";
   const parsed = JSON.parse(output) as {
     shortSummary?: string;
     longSummary?: string;
     whyItMatters?: string;
+    takeaway?: string;
+    clinicalImpact?: string;
+    methodQuality?: string;
+    whoItsFor?: string;
     qualityFlags?: string[];
   };
 
+  const fallback = heuristicSummary(title, journal, articleType);
+
   return {
-    shortSummary: parsed.shortSummary ?? heuristicSummary(title, journal, articleType).shortSummary,
-    longSummary: parsed.longSummary ?? heuristicSummary(title, journal, articleType).longSummary,
+    shortSummary: parsed.shortSummary ?? fallback.shortSummary,
+    longSummary: parsed.longSummary ?? fallback.longSummary,
     whyItMatters: parsed.whyItMatters ?? null,
+    takeaway: parsed.takeaway ?? fallback.takeaway,
+    clinicalImpact: parsed.clinicalImpact ?? fallback.clinicalImpact,
+    methodQuality: parsed.methodQuality ?? fallback.methodQuality,
+    whoItsFor: parsed.whoItsFor ?? fallback.whoItsFor,
     qualityFlags: Array.isArray(parsed.qualityFlags) ? parsed.qualityFlags : []
   };
 }
@@ -119,6 +149,10 @@ async function processQueue() {
         shortSummary: summary.shortSummary,
         longSummary: summary.longSummary,
         whyItMatters: summary.whyItMatters,
+        takeaway: summary.takeaway,
+        clinicalImpact: summary.clinicalImpact,
+        methodQuality: summary.methodQuality,
+        whoItsFor: summary.whoItsFor,
         qualityFlags: summary.qualityFlags,
         modelName: client ? modelName : "heuristic-fallback"
       });

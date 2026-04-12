@@ -1,3 +1,4 @@
+import { classifyStudyDesign } from "./study-design";
 import { TOPICS } from "./topics";
 import type { PaperRecord, TopicId } from "./types";
 
@@ -49,6 +50,7 @@ export function createSampleFeed(): PaperRecord[] {
       const id = `${topic.id}-${titleIndex + 1}`;
       const dayOffset = topicIndex * 2 + titleIndex;
 
+      const articleType = titleIndex % 2 === 0 ? "Clinical Study" : "Review";
       return {
         id,
         slug: slugify(title),
@@ -58,11 +60,23 @@ export function createSampleFeed(): PaperRecord[] {
         journal: topic.group === "movement-science" ? "Journal of Applied Human Science" : "Digital Medicine Review",
         title,
         publishedAt: new Date(Date.now() - dayOffset * 86_400_000).toISOString(),
-        articleType: titleIndex % 2 === 0 ? "Clinical Study" : "Review",
+        articleType,
+        studyDesign: classifyStudyDesign(articleType, title),
         topicIds: [topic.id],
+        authors: [
+          { given: "A.", family: "Smith", position: 1 },
+          { given: "B.", family: "Jones", position: 2 }
+        ],
         shortSummary: `A concise summary for ${topic.label.toLowerCase()} readers that highlights the main result without overstating the evidence.`,
         longSummary:
           "This sample record shows how the product presents a readable explanation, study framing, and direct source links before a real ingestion pipeline populates the database.",
+        whyItMatters: "It demonstrates how PaperBites surfaces key findings so clinicians and researchers can stay current without reading every full paper.",
+        takeaway: "One-screen takeaway: this paper signals a potentially useful development worth skimming before opening the source.",
+        clinicalImpact: "Likely most useful as context for practice awareness rather than a stand-alone basis for changing care.",
+        methodQuality: titleIndex % 2 === 0 ? "Clinical-study framing suggests stronger practical signal, but the original methods still matter." : "Review-style framing is useful for orientation, but the underlying included evidence should still be checked.",
+        whoItsFor: topic.group === "clinical-ai"
+          ? "Best for clinicians, digital-health operators, and applied AI teams."
+          : "Best for clinicians, researchers, and students tracking this specialty.",
         imageUrl: null,
         openAccess: titleIndex % 2 === 0,
         abstractAvailable: true,

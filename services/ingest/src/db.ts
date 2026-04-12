@@ -1,7 +1,7 @@
 import "./env";
 
 import { Pool } from "pg";
-import { TOPICS } from "../../../packages/shared/src";
+import { classifyStudyDesign, TOPICS } from "../../../packages/shared/src";
 import type { TopicId } from "../../../packages/shared/src";
 
 const connectionString = process.env.DATABASE_URL;
@@ -102,6 +102,7 @@ export async function upsertPaper(input: {
   abstractAvailable: boolean;
   openAccess: boolean;
   topicIds: TopicId[];
+  authors: Array<{ given: string; family: string; position: number }>;
   snapshot: unknown;
 }) {
   const client = await pool.connect();
@@ -114,6 +115,8 @@ export async function upsertPaper(input: {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "")}-${input.sourceId.toLowerCase()}`;
 
+    const studyDesign = classifyStudyDesign(input.articleType, input.title);
+
     const paperResult = await client.query<{ id: string; inserted: boolean }>(
       `
         insert into papers (
@@ -124,13 +127,14 @@ export async function upsertPaper(input: {
           journal,
           published_at,
           article_type,
+          study_design,
           doi,
           doi_url,
           source_url,
           abstract_available,
           open_access
         )
-        values ('pubmed', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        values ('pubmed', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         on conflict (source, source_id) do update
         set
           slug = excluded.slug,
@@ -138,6 +142,7 @@ export async function upsertPaper(input: {
           journal = excluded.journal,
           published_at = excluded.published_at,
           article_type = excluded.article_type,
+          study_design = excluded.study_design,
           doi = excluded.doi,
           doi_url = excluded.doi_url,
           source_url = excluded.source_url,
@@ -154,6 +159,7 @@ export async function upsertPaper(input: {
         input.journal,
         input.publishedAt.toISOString(),
         input.articleType,
+        studyDesign,
         input.doi,
         input.doiUrl,
         input.sourceUrl,
@@ -164,10 +170,25 @@ export async function upsertPaper(input: {
 
     const paperId = paperResult.rows[0].id;
 
+    const existingTopics = await client.query<{ topic_id: TopicId }>(
+      "select topic_id from paper_topic_map where paper_id = $1",
+      [paperId]
+    );
+    const merged = new Set<TopicId>([...existingTopics.rows.map((r) => r.topic_id), ...input.topicIds]);
+
     await client.query("delete from paper_topic_map where paper_id = $1", [paperId]);
 
-    for (const topicId of input.topicIds) {
+    for (const topicId of merged) {
       await client.query("insert into paper_topic_map (paper_id, topic_id) values ($1, $2)", [paperId, topicId]);
+    }
+
+    await client.query("delete from paper_authors where paper_id = $1", [paperId]);
+
+    for (const author of input.authors) {
+      await client.query(
+        "insert into paper_authors (paper_id, position, given_name, family_name) values ($1, $2, $3, $4)",
+        [paperId, author.position, author.given, author.family]
+      );
     }
 
     await client.query(

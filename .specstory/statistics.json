@@ -1,0 +1,58 @@
+{
+  "sessions": {
+    "2be9aafb-652e-4771-9656-7e6f0c98aff1": {
+      "user_message_count": 12,
+      "agent_message_count": 320,
+      "start_timestamp": "2026-04-10T17:05:22+02:00",
+      "end_timestamp": "2026-04-10T17:05:22+02:00",
+      "markdown_size_bytes": 188418,
+      "provider": "cursoride",
+      "last_updated": "2026-04-11T15:14:59Z"
+    },
+    "76a5db5f-eb59-45f6-8189-f3541f307839": {
+      "user_message_count": 1,
+      "agent_message_count": 9,
+      "start_timestamp": "2026-04-07T21:39:04+02:00",
+      "end_timestamp": "2026-04-07T21:39:04+02:00",
+      "markdown_size_bytes": 5004,
+      "provider": "cursoride",
+      "last_updated": "2026-04-12T14:43:08Z"
+    },
+    "9abd57b0-b8db-4a80-8009-306613af892b": {
+      "user_message_count": 1,
+      "agent_message_count": 7,
+      "start_timestamp": "2026-04-12T16:42:28+02:00",
+      "end_timestamp": "2026-04-12T16:42:28+02:00",
+      "markdown_size_bytes": 4087,
+      "provider": "cursoride",
+      "last_updated": "2026-04-12T14:44:24Z"
+    },
+    "a3b27060-82bf-42c4-a578-d25e4c6ba6b7": {
+      "user_message_count": 1,
+      "agent_message_count": 75,
+      "start_timestamp": "2026-04-11T16:56:47+02:00",
+      "end_timestamp": "2026-04-11T16:56:47+02:00",
+      "markdown_size_bytes": 49483,
+      "provider": "cursoride",
+      "last_updated": "2026-04-12T14:43:08Z"
+    },
+    "f3c6172a-fc54-4476-8f77-3ac09a1f447e": {
+      "user_message_count": 1,
+      "agent_message_count": 2,
+      "start_timestamp": "2026-04-09T21:38:27+02:00",
+      "end_timestamp": "2026-04-09T21:38:27+02:00",
+      "markdown_size_bytes": 1443,
+      "provider": "cursoride",
+      "last_updated": "2026-04-12T14:43:08Z"
+    },
+    "fda1333a-70fe-4d27-b07b-b6ae86ac8099": {
+      "user_message_count": 20,
+      "agent_message_count": 876,
+      "start_timestamp": "2026-04-07T21:37:09+02:00",
+      "end_timestamp": "2026-04-07T21:37:09+02:00",
+      "markdown_size_bytes": 470724,
+      "provider": "cursoride",
+      "last_updated": "2026-04-12T14:43:08Z"
+    }
+  }
+}
